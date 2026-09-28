@@ -1,2 +1,7 @@
-/core/config.php
+# --- Archivos de Configuración (Claves y Contraseñas) ---
+.env
+.env.local
+
+# EXCEPCIÓN: No ignores este archivo específico, este sí súbelo
+!/core/config.php
 

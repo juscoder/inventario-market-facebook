@@ -30,7 +30,7 @@ Vista (index.php, detalle.php, login.php, admin/ + includes/)  →  Controlador 
 - **Endpoints API** (`admin/api/*.php`): delgados. Cabeceras JSON, validan método HTTP, protegen sesión con `requiereAutenticacionJson()`, delegan al controlador y hacen `echo json_encode(...)`.
 - **Vistas** (archivos `.php` de la raíz + `admin/index.php` + `includes/`): páginas PHP que se componen con `require` (`header.php` → `navbar.php` → contenido → `footer.php`). No acceden a la BD directamente excepto el catálogo, que pagina con `LIMIT/OFFSET`.
 - **Autoload** (`app/init.php`): registrador `spl_autoload_register` con prefijo `App\` + carga de `core/auth.php`. Todo lo que usa BD/auth empieza por ahí.
-- **Núcleo** (`core/`): `database.php` (singleton PDO), `config.php` (credenciales), `auth.php` (sesiones), `cloudinary.php` (subida de imágenes).
+- **Núcleo** (`core/`): `config.php` (credenciales de BD y Cloudinary, con variables de entorno y respaldo local), `database.php` (singleton PDO), `auth.php` (sesiones + `rutaBase()`), `cloudinary.php` (subida de imágenes).
 
 ### Flujo de una operación CRUD desde el panel
 
@@ -116,7 +116,14 @@ inventario-market-facebook/         # ← raíz web (document root)
    define('DB_CHARSET',  'utf8mb4');
    ```
    El puerto solo se añade al DSN si `DB_PORT` tiene valor (en local queda en 3306).
-4. **Cloudinary**: en `core/cloudinary.php` reemplazar `tu_cloud_name` y `tu_upload_preset` por los tuyos (el preset debe estar en modo *Unsigned*).
+4. **Cloudinary**: declarar las dos variables de entorno en Windows (el preset debe estar en
+   modo *Unsigned*). Si no existen, `core/config.php` usa el respaldo `tu_cloud_name` y la
+   subida de fotos fallará:
+   ```powershell
+   setx CLOUDINARY_CLOUD_NAME    "tu_cloud_name_real"
+   setx CLOUDINARY_UPLOAD_PRESET "tu_upload_preset_real"
+   ```
+   `setx` solo afecta a los procesos nuevos: abre de nuevo la terminal o el editor.
 5. Entrar en `http://localhost:8000/login.php` con `admin` / `password123` y **cambiar la contraseña** (importar de nuevo el `INSERT` del `schema.sql` con otro hash, o editar el registro con phpMyAdmin usando un hash nuevo de `password_hash()`).
 
 ## 6. Despliegue en hosting compartido
@@ -127,7 +134,9 @@ inventario-market-facebook/         # ← raíz web (document root)
 3. Conectar la BD: si el panel exporta `DB_HOST` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD`,
    `core/config.php` las lee solas; si no, editar `core/config.php` con las credenciales
    del hosting (ajustar también `DB_PORT` si la BD no está en 3306).
-4. Completar `core/cloudinary.php`.
+4. Cloudinary: si el panel exporta `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_UPLOAD_PRESET`,
+   `core/config.php` las lee solas; si no, poner los valores reales en el respaldo de
+   `core/config.php`.
 5. Probar `/login.php` → `/admin/`.
 
 ## 7. Despliegue en Wasmer (GitHub)
@@ -146,7 +155,15 @@ La raíz del repositorio **es** la raíz web, así que Wasmer detecta PHP y sirv
    ```
    > Si al desplegar no aparecen esas variables, Wasmer no ha detectado la BD: crearla desde
    > el dashboard o añadir `app.yaml` con `capabilities.database` y volver a desplegar.
-5. **Cloudinary**: completar `CLOUDINARY_CLOUD_NAME` y `CLOUDINARY_UPLOAD_PRESET` en `core/cloudinary.php`.
+5. **Cloudinary**: Wasmer **no** inyecta estas variables (solo las de la BD), hay que
+   declararlas una sola vez, **sin tocar ningún archivo ni crear `app.yaml`**:
+   - *Dashboard*: la app → *Settings* → pestaña *Environment Vars* → *Add variable* →
+     `CLOUDINARY_CLOUD_NAME` y `CLOUDINARY_UPLOAD_PRESET` → *Save and Redeploy*.
+   - *CLI (alternativa)*:
+     ```bash
+     wasmer app secrets create CLOUDINARY_CLOUD_NAME    "tu_cloud_name_real"
+     wasmer app secrets create CLOUDINARY_UPLOAD_PRESET "tu_upload_preset_real"
+     ```
 6. Entrar en `https://<nombre-app>.wasmer.app/login.php`.
 
 > Cada vez que se haga `git push` a `main`, Wasmer vuelve a desplegar automáticamente.
@@ -185,14 +202,18 @@ admin.js (FormData con la imagen)
 
 1. Crear cuenta gratuita en Cloudinary y copiar el **Cloud Name** desde el dashboard.
 2. *Settings → Upload → Upload presets* → *Add preset*: modo **Unsigned** (sin firma), con nombre cualquiera.
-3. Completar en `core/cloudinary.php`:
+3. Declarar los valores en las variables de entorno (ver §5.4 para local, §7.5 para Wasmer).
+   `core/config.php` los lee y expone las constantes:
    ```php
-   define('CLOUDINARY_CLOUD_NAME', 'tu_cloud_name');
-   define('CLOUDINARY_UPLOAD_PRESET', 'tu_upload_preset');
+   define('CLOUDINARY_CLOUD_NAME',    entorno('CLOUDINARY_CLOUD_NAME', 'tu_cloud_name'));
+   define('CLOUDINARY_UPLOAD_PRESET', entorno('CLOUDINARY_UPLOAD_PRESET', 'tu_upload_preset'));
    ```
+   Si la variable no está definida, se usa el respaldo de la derecha (`tu_cloud_name`).
 
 **Detalles a tener en cuenta:**
 
+- Los valores reales **no van en git**: `core/config.php` solo guarda los respaldos; las
+  credenciales viven en las variables de entorno de cada entorno.
 - La subida la hace **PHP desde el servidor** (cURL), no el navegador: no se expone ninguna API key en el cliente.
 - El preset *unsigned* es el que permite subir sin credenciales; por eso debe restringirse solo a imágenes (el código ya valida `mime_content_type` antes de enviar).
 - Las imágenes subidas quedan **públicas** (cualquiera con la URL puede verlas): no usar Cloudinary para datos privados.

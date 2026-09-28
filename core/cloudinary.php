@@ -1,8 +1,7 @@
 <?php
 // Subida de imágenes a Cloudinary (Upload Preset Unsigned) mediante cURL
 
-define('CLOUDINARY_CLOUD_NAME', 'tu_cloud_name');
-define('CLOUDINARY_UPLOAD_PRESET', 'tu_upload_preset');
+require_once __DIR__ . '/config.php';
 
 /**
  * Envía una imagen temporal ($_FILES) a Cloudinary y retorna su URL segura.

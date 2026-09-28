@@ -14,3 +14,7 @@ define('DB_NAME',     entorno('DB_NAME', 'inventario_remates'));
 define('DB_USERNAME', entorno('DB_USERNAME', 'root'));
 define('DB_PASSWORD', entorno('DB_PASSWORD', ''));
 define('DB_CHARSET',  'utf8mb4');
+
+// Cloudinary (Upload Preset Unsigned)
+define('CLOUDINARY_CLOUD_NAME',    entorno('CLOUDINARY_CLOUD_NAME', 'tu_cloud_name'));
+define('CLOUDINARY_UPLOAD_PRESET', entorno('CLOUDINARY_UPLOAD_PRESET', 'tu_upload_preset'));

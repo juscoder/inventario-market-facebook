@@ -6,6 +6,28 @@ require_once __DIR__ . '/database.php';
 const IDLE_TIMEOUT_SEGUNDOS = 1800; // 30 minutos de inactividad
 
 /**
+ * Prefijo de la subcarpeta desde la que se sirve el proyecto.
+ * '' en la raíz del dominio, '/inventario-market-facebook' en una subcarpeta.
+ * La raíz web es un nivel por encima de la única subcarpeta pública: /admin
+ */
+function rutaBase(): string
+{
+    static $base = null;
+    if ($base !== null) {
+        return $base;
+    }
+
+    $dir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+    if (basename($dir) === 'admin') {
+        $dir = dirname($dir);
+    }
+
+    $base = ($dir === '/' || $dir === '' || $dir === '.') ? '' : rtrim($dir, '/');
+
+    return $base;
+}
+
+/**
  * Inicia la sesión con cookies endurecidas (httponly, samesite, secure si HTTPS)
  */
 function iniciarSesion(): void
@@ -65,7 +87,7 @@ function requiereAutenticacion(): void
 
     if (empty($_SESSION['admin']) || sesionExpirada()) {
         destruirSesion();
-        header('Location: login.php');
+        header('Location: ' . rutaBase() . '/login.php');
         exit;
     }
 

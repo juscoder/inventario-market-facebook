@@ -3,7 +3,7 @@
 
 use App\Models\Producto;
 
-require_once __DIR__ . '/../app/init.php';
+require_once __DIR__ . '/app/init.php';
 
 $id     = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 $pagina = max(1, filter_input(INPUT_GET, 'pagina', FILTER_VALIDATE_INT) ?: 1);
@@ -14,8 +14,8 @@ $pageTitle = !empty($producto['titulo'])
     ? $producto['titulo'] . ' - Inventario de Remates'
     : 'Producto - Inventario de Remates';
 
-require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/navbar.php';
+require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/navbar.php';
 ?>
 
 <main class="flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -80,4 +80,4 @@ require_once __DIR__ . '/../includes/navbar.php';
     <?php endif; ?>
 </main>
 
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/includes/footer.php'; ?>

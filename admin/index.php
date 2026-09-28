@@ -144,7 +144,7 @@ require_once __DIR__ . '/../includes/navbar.php';
     </div>
 </div>
 
-<script src="assets/js/alertas.js"></script>
-<script src="assets/js/admin.js"></script>
+<script src="<?= rutaBase() ?>/assets/js/alertas.js"></script>
+<script src="<?= rutaBase() ?>/assets/js/admin.js"></script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

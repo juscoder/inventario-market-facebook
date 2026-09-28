@@ -1,10 +1,10 @@
 <?php
-require_once __DIR__ . '/../core/auth.php';
+require_once __DIR__ . '/core/auth.php';
 
 // Si ya hay sesión activa, ir al panel
 if (!empty($_SESSION['admin'])) {
     if (!sesionExpirada()) {
-        header('Location: admin.php');
+        header('Location: ' . rutaBase() . '/admin/');
         exit;
     }
     destruirSesion();
@@ -22,15 +22,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['admin'] = true;
         $_SESSION['usuario'] = $usuario;
         $_SESSION['ultimo_acceso'] = time();
-        header('Location: admin.php');
+        header('Location: ' . rutaBase() . '/admin/');
         exit;
     }
     $error = 'Usuario o contraseña incorrectos.';
 }
 
 $pageTitle = 'Iniciar Sesión - Inventario de Remates';
-require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/navbar.php';
+require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/navbar.php';
 ?>
 
 <main class="flex-grow flex items-center justify-center px-4 py-12">
@@ -81,4 +81,4 @@ require_once __DIR__ . '/../includes/navbar.php';
     </div>
 </main>
 
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/includes/footer.php'; ?>

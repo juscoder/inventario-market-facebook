@@ -20,28 +20,36 @@
 ## 2. Estructura Organizada de Directorios
 
 ```text
-inventario-remates/
-├── core/                   
+inventario-market-facebook/        # ← raíz web (document root)
+├── core/
 │   ├── database.php        # Conexión PDO a MySQL 
 │   ├── cloudinary.php      # Función cURL para enviar fotos a Cloudinary
+│   ├── config.php          # Credenciales de la BD
 │   └── auth.php            # Validaciones de sesión PHP
 ├── includes/               
 │   ├── header.php          # <head>, Tailwind CDN, FontAwesome CDN, <body>
 │   ├── footer.php          # Cierre de </body>, </html> y scripts
 │   └── navbar.php          # Menú de navegación
-├── api/                    # Endpoints AJAX (Responden JSON)
-│   ├── leer_producto.php   # GET: Obtiene 1 producto para edición
-│   ├── crear.php           # POST: Sube foto a Cloudinary y guarda en MySQL
-│   ├── actualizar.php      # POST: Actualiza MySQL y reemplaza foto (opcional)
-│   └── eliminar.php        # POST: Borra registro en MySQL
+├── app/
+│   ├── init.php            # Autoload App\ + auth
+│   ├── Controllers/        # Validación y respuestas HTTP
+│   └── Models/             # Consultas preparadas
+├── admin/
+│   ├── index.php           # Panel CRUD (Tabla, Modales). Protegido.
+│   └── api/                # Endpoints AJAX (Responden JSON)
+│       ├── leer_producto.php   # GET: Obtiene 1 producto para edición
+│       ├── crear.php           # POST: Sube foto a Cloudinary y guarda en MySQL
+│       ├── actualizar.php      # POST: Actualiza MySQL y reemplaza foto (opcional)
+│       └── eliminar.php        # POST: Borra registro en MySQL
 ├── assets/                 
 │   └── js/
 │       ├── alertas.js      # Notificaciones Toast y Modales de confirmación
 │       └── admin.js        # Lógica CRUD Fetch API
 ├── index.php               # Catálogo público (Cards) con Paginación
+├── detalle.php             # Ficha pública de un producto
 ├── login.php               # Pantalla de acceso al panel
 ├── logout.php              # Destrucción de sesión
-└── admin.php               # Panel CRUD (Tabla, Modales). Protegido.
+└── schema.sql              # BD + usuario admin por defecto
 ```
 
 ---
@@ -84,13 +92,13 @@ El desarrollo debe realizarse estrictamente en el siguiente orden. **El Agente I
 * Implementar función cURL que reciba una imagen temporal (`$_FILES`), la envíe a Cloudinary (Preset Unsigned) y retorne la URL pública `https://...` limpia.
 
 ### Fase 4: Endpoints API (Backend CRUD)
-* Desarrollar los 4 archivos dentro de la carpeta `api/` (`crear.php`, `leer_producto.php`, `actualizar.php`, `eliminar.php`).
+* Desarrollar los 4 archivos dentro de la carpeta `admin/api/` (`crear.php`, `leer_producto.php`, `actualizar.php`, `eliminar.php`).
 * **Regla estricta:** Todos deben devolver un objeto JSON con estructura `{ success: true/false, message: '...' }` y cabeceras de `application/json`.
 
 ### Fase 5: Panel de Administración y Javascript (Frontend CRUD)
-* Crear `admin.php` (Tabla de datos y Modales HTML ocultos para crear/editar y confirmar eliminación).
+* Crear `admin/index.php` (Tabla de datos y Modales HTML ocultos para crear/editar y confirmar eliminación).
 * Crear `assets/js/alertas.js` (Lógica para renderizar *Toasts* verdes/rojos y manipular la visibilidad de los modales mediante clases de Tailwind).
-* Crear `assets/js/admin.js` (Peticiones `fetch()` hacia la carpeta `api/`, envío de `FormData` e inyección de datos dinámicos sin recargar la página).
+* Crear `assets/js/admin.js` (Peticiones `fetch()` hacia la carpeta `admin/api/`, envío de `FormData` e inyección de datos dinámicos sin recargar la página).
 
 ### Fase 6: Catálogo Público y Paginación
 * Crear `index.php`.
@@ -103,5 +111,5 @@ El desarrollo debe realizarse estrictamente en el siguiente orden. **El Agente I
 ## 5. Reglas de Negocio y Lógica Clave
 1. **Imágenes vs Texto:** La foto obligatoriamente se procesa hacia Cloudinary. MySQL SOLO recibe la URL generada.
 2. **Edición Inteligente:** Al actualizar un producto, si el usuario NO adjunta una foto nueva, el sistema debe conservar la `imagen_url` anterior en la base de datos sin lanzar errores ni sobreescribir con valores nulos.
-3. **Seguridad Base:** El archivo `admin.php` debe invocar `auth.php` en la línea 1. Si no hay sesión válida, se bloquea la carga de la vista y redirige a `login.php`.
+3. **Seguridad Base:** El archivo `admin/index.php` debe invocar `auth.php` (vía `app/init.php`) en la línea 1. Si no hay sesión válida, se bloquea la carga de la vista y redirige a `/login.php`.
 4. **Feedback Visual:** Ninguna acción de CRUD debe dejar al usuario en incertidumbre. Toda creación, edición o eliminación debe disparar un *Toast* notificando el resultado (éxito o fallo) manipulado por `alertas.js`.

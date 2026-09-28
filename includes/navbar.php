@@ -4,20 +4,20 @@
 $esAdmin = !empty($_SESSION['admin']);
 
 $enlaces = [
-    ['url' => 'index.php', 'icono' => 'fa-store', 'texto' => 'Catálogo', 'clases' => ''],
+    ['url' => rutaBase() . '/index.php', 'icono' => 'fa-store', 'texto' => 'Catálogo', 'clases' => ''],
 ];
 if ($esAdmin) {
-    $enlaces[] = ['url' => 'admin.php', 'icono' => 'fa-screwdriver-wrench', 'texto' => 'Admin', 'clases' => ''];
-    $enlaces[] = ['url' => 'logout.php', 'icono' => 'fa-right-from-bracket', 'texto' => 'Salir', 'clases' => 'bg-red-600 hover:bg-red-700'];
+    $enlaces[] = ['url' => rutaBase() . '/admin/', 'icono' => 'fa-screwdriver-wrench', 'texto' => 'Admin', 'clases' => ''];
+    $enlaces[] = ['url' => rutaBase() . '/logout.php', 'icono' => 'fa-right-from-bracket', 'texto' => 'Salir', 'clases' => 'bg-red-600 hover:bg-red-700'];
 } else {
-    $enlaces[] = ['url' => 'login.php', 'icono' => 'fa-user-lock', 'texto' => 'Ingresar', 'clases' => 'bg-amber-500 text-slate-900 font-semibold hover:bg-amber-400'];
+    $enlaces[] = ['url' => rutaBase() . '/login.php', 'icono' => 'fa-user-lock', 'texto' => 'Ingresar', 'clases' => 'bg-amber-500 text-slate-900 font-semibold hover:bg-amber-400'];
 }
 ?>
 
 <nav class="bg-slate-800 text-white shadow-md relative z-40">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
-            <a href="index.php" class="flex items-center gap-2 text-lg font-bold hover:text-amber-400 transition min-w-0">
+            <a href="<?= rutaBase() ?>/index.php" class="flex items-center gap-2 text-lg font-bold hover:text-amber-400 transition min-w-0">
                 <i class="fa-solid fa-gavel text-amber-400 shrink-0"></i>
                 <span class="truncate">Inventario de Remates</span>
             </a>

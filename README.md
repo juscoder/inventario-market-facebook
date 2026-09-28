@@ -20,21 +20,21 @@ Aplicación web para publicar y administrar un catálogo de productos de remates
 Patrón **MVC ligero por capas**, sin framework:
 
 ```
-Vista (public/*.php + includes/)  →  Controlador (app/Controllers)  →  Modelo (app/Models)  →  PDO/MySQL
+Vista (index.php, detalle.php, login.php, admin/ + includes/)  →  Controlador (app/Controllers)  →  Modelo (app/Models)  →  PDO/MySQL
                  │
-                 └── (CRUD en panel) ──► Fetch API ──► public/api/*.php ──► JSON
+                 └── (CRUD en panel) ──► Fetch API ──► admin/api/*.php ──► JSON
 ```
 
 - **Modelo** (`app/Models/Producto.php`): clases con métodos estáticos que solo hacen consultas preparadas. No contiene lógica de negocio ni HTML.
 - **Controlador** (`app/Controllers/ProductoController.php`): valida entradas (`filter_var`, `trim`), decide el código HTTP y arma la respuesta. **Devuelve** `['status' => ..., 'body' => {success, message}]`; nunca imprime.
-- **Endpoints API** (`public/api/*.php`): delgados. Cabeceras JSON, validan método HTTP, protegen sesión con `requiereAutenticacionJson()`, delegan al controlador y hacen `echo json_encode(...)`.
-- **Vistas** (`public/*.php` + `includes/`): páginas PHP que se componen con `require` (`header.php` → `navbar.php` → contenido → `footer.php`). No acceden a la BD directamente excepto el catálogo, que pagina con `LIMIT/OFFSET`.
+- **Endpoints API** (`admin/api/*.php`): delgados. Cabeceras JSON, validan método HTTP, protegen sesión con `requiereAutenticacionJson()`, delegan al controlador y hacen `echo json_encode(...)`.
+- **Vistas** (archivos `.php` de la raíz + `admin/index.php` + `includes/`): páginas PHP que se componen con `require` (`header.php` → `navbar.php` → contenido → `footer.php`). No acceden a la BD directamente excepto el catálogo, que pagina con `LIMIT/OFFSET`.
 - **Autoload** (`app/init.php`): registrador `spl_autoload_register` con prefijo `App\` + carga de `core/auth.php`. Todo lo que usa BD/auth empieza por ahí.
 - **Núcleo** (`core/`): `database.php` (singleton PDO), `config.php` (credenciales), `auth.php` (sesiones), `cloudinary.php` (subida de imágenes).
 
 ### Flujo de una operación CRUD desde el panel
 
-1. `admin.js` envía `fetch()` con `FormData` a `public/api/<accion>.php`.
+1. `admin.js` envía `fetch()` con `FormData` a `admin/api/<accion>.php`.
 2. El endpoint valida método + sesión (`requiereAutenticacionJson()` → 401 si no).
 3. `ProductoController` valida, sube la foto a Cloudinary si corresponde y llama al modelo.
 4. El modelo ejecuta la consulta preparada en MySQL.
@@ -43,42 +43,54 @@ Vista (public/*.php + includes/)  →  Controlador (app/Controllers)  →  Model
 ## 3. Estructura del proyecto
 
 ```
-sistema_inventario/
+inventario-market-facebook/         # ← raíz web (document root)
+├── index.php                       # Catálogo público con paginación
+├── detalle.php                     # Ficha de un producto
+├── login.php / logout.php          # Acceso y cierre de sesión
+├── admin/
+│   ├── index.php                   # Panel CRUD (protegido)
+│   └── api/
+│       ├── leer_producto.php       # GET
+│       ├── crear.php               # POST
+│       ├── actualizar.php          # POST
+│       └── eliminar.php            # POST
+├── assets/
+│   └── js/
+│       ├── admin.js                # CRUD con Fetch
+│       └── alertas.js              # Toasts y modales
 ├── app/
-│   ├── init.php                  # Autoload App\ + auth
+│   ├── init.php                    # Autoload App\ + auth
 │   ├── Controllers/
 │   │   └── ProductoController.php
 │   └── Models/
 │       └── Producto.php
 ├── core/
-│   ├── config.php                # Credenciales reales (NO se sube a git)
-│   ├── config.example.php        # Plantilla a copiar
-│   ├── database.php              # getPDO() singleton
-│   ├── auth.php                  # Sesiones, login, timeouts
-│   └── cloudinary.php            # subirImagenCloudinary()
+│   ├── config.php                  # Credenciales (repo privado)
+│   ├── database.php                # getPDO() singleton
+│   ├── auth.php                    # Sesiones, login, timeouts
+│   └── cloudinary.php              # subirImagenCloudinary()
 ├── includes/
-│   ├── header.php                # <head>, CDNs, <body>
-│   ├── navbar.php                # Menú responsive (hamburguesa en móvil)
+│   ├── header.php                  # <head>, CDNs, <body>
+│   ├── navbar.php                  # Menú responsive (hamburguesa en móvil)
 │   └── footer.php
-├── public/                       # ← raíz web (document root)
-│   ├── index.php                 # Catálogo público con paginación
-│   ├── detalle.php               # Ficha de un producto
-│   ├── login.php / logout.php
-│   ├── admin.php                 # Panel CRUD (protegido)
-│   ├── api/
-│   │   ├── leer_producto.php     # GET
-│   │   ├── crear.php             # POST
-│   │   ├── actualizar.php        # POST
-│   │   └── eliminar.php          # POST
-│   └── assets/js/
-│       ├── admin.js              # CRUD con Fetch
-│       └── alertas.js            # Toasts y modales
-├── schema.sql                    # BD + usuario admin por defecto
-├── proyecto.md                   # PRD (documento maestro de requerimientos)
-└── .gitignore                    # Ignora core/config.php
+├── schema.sql                      # BD + usuario admin por defecto
+├── proyecto.md                     # PRD (documento maestro de requerimientos)
+└── .gitignore
 ```
 
-> Las vistas usan rutas relativas (`__DIR__ . '/../core/...'`), por eso `core/`, `app/` e `includes/` deben ser **hermanos** de la carpeta web, nunca metidos dentro de ella.
+> **Reglas de rutas:**
+>
+> - Los `require`/`include` usan rutas relativas a `__DIR__`
+>   (`__DIR__ . '/core/database.php'` en la raíz, `__DIR__ . '/../core/...'` dentro de `admin/`).
+> - Los enlaces HTML y los `header('Location: ...')` usan `rutaBase()` (definida en
+>   `core/auth.php`), que devuelve el prefijo de la subcarpeta desde la que se sirve el
+>   proyecto: `''` si está en la raíz del dominio, `/inventario-market-facebook` si vive en
+>   una subcarpeta. Por eso el mismo código funciona en la raíz (hosting tradicional, Wasmer)
+>   y dentro de una subcarpeta (`http://localhost/jus-proyectos/inventario-market-facebook/`).
+>
+> **Único acoplamiento:** `rutaBase()` asume que `admin/` es la única subcarpeta pública
+> (la raíz del proyecto se calcula como un nivel por encima). Si renombras esa carpeta,
+> hay que actualizar el `basename($dir) === 'admin'` de `core/auth.php`.
 
 ## 4. Requisitos
 
@@ -88,42 +100,71 @@ sistema_inventario/
 
 ## 5. Instalación local
 
-1. **Clonar** el repositorio y servir la carpeta `public/` (por ejemplo con `php -S localhost:8000 -t public`).
+1. **Clonar** el repositorio y servirlo desde la raíz del proyecto (por ejemplo con `php -S localhost:8000`).
 2. **Crear la BD**: importar `schema.sql` en phpMyAdmin o `mysql -u root -p < schema.sql`.
    - Crea la base `inventario_remates`, las tablas `productos` y `usuarios`,
    - e inserta el admin por defecto: **`admin` / `password123`** (`INSERT IGNORE`: solo se crea si aún no existe).
-3. **Configurar**: copiar `core/config.example.php` → `core/config.php` y poner los datos reales:
+3. **Configurar**: no hace falta nada por defecto. `core/config.php` trae el respaldo para
+   XAMPP (`localhost` / `inventario_remates` / `root` / sin contraseña). Si el entorno exporta
+   variables de entorno, **manda la variable**; si no existe, se usa el respaldo:
    ```php
-   define('DB_HOST', 'localhost');
-   define('DB_NAME', 'inventario_remates');
-   define('DB_USER', 'root');
-   define('DB_PASS', '');
+   define('DB_HOST',     entorno('DB_HOST', 'localhost'));
+   define('DB_PORT',     entorno('DB_PORT', ''));
+   define('DB_NAME',     entorno('DB_NAME', 'inventario_remates'));
+   define('DB_USERNAME', entorno('DB_USERNAME', 'root'));
+   define('DB_PASSWORD', entorno('DB_PASSWORD', ''));
+   define('DB_CHARSET',  'utf8mb4');
    ```
+   El puerto solo se añade al DSN si `DB_PORT` tiene valor (en local queda en 3306).
 4. **Cloudinary**: en `core/cloudinary.php` reemplazar `tu_cloud_name` y `tu_upload_preset` por los tuyos (el preset debe estar en modo *Unsigned*).
 5. Entrar en `http://localhost:8000/login.php` con `admin` / `password123` y **cambiar la contraseña** (importar de nuevo el `INSERT` del `schema.sql` con otro hash, o editar el registro con phpMyAdmin usando un hash nuevo de `password_hash()`).
 
 ## 6. Despliegue en hosting compartido
 
-1. Subir todo el proyecto (File Manager / FTP).
-2. **Document root**: si tu panel lo permite, apuntar el dominio a `/public`. Si no, súbelo todo a `public_html` dejando `core/`, `app/` e `includes/` como carpetas hermanas de los archivos PHP.
-3. Crear la base de datos desde el panel (cPanel → MySQL Databases) e importar `schema.sql` desde phpMyAdmin.
+1. Subir todo el proyecto a la raíz del dominio (`public_html`), de modo que `index.php` quede en `/index.php`.
+2. Crear la base de datos desde el panel (cPanel → MySQL Databases) e importar `schema.sql` desde phpMyAdmin.
    - Si el importador rechaza `CREATE DATABASE`/`USE` por privilegios, ejecuta solo las sentencias `CREATE TABLE` + `INSERT` dentro de la BD ya creada.
-4. Subir `core/config.php` (no está en git) con las credenciales del hosting (`localhost` + usuario/clave de la BD del panel).
-5. Completar `core/cloudinary.php`.
-6. Probar `login.php` → `admin.php`.
+3. Conectar la BD: si el panel exporta `DB_HOST` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD`,
+   `core/config.php` las lee solas; si no, editar `core/config.php` con las credenciales
+   del hosting (ajustar también `DB_PORT` si la BD no está en 3306).
+4. Completar `core/cloudinary.php`.
+5. Probar `/login.php` → `/admin/`.
 
-## 7. Endpoints de la API
+## 7. Despliegue en Wasmer (GitHub)
+
+La raíz del repositorio **es** la raíz web, así que Wasmer detecta PHP y sirve `index.php` sin ningún archivo de configuración (`app.yaml` es opcional).
+
+1. Subir los cambios a la rama `main` del repositorio.
+2. En [Wasmer](https://wasmer.io) → *Apps* → conectar el repositorio de GitHub y elegir la rama `main`.
+3. Wasmer detecta los archivos `.php`, empaqueta el proyecto y publica en `https://<nombre-app>.wasmer.app`.
+4. **Base de datos**: Wasmer aprovisiona una BD y la inyecta como variables de entorno
+   (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`), que `core/config.php`
+   lee automáticamente — **no hay que editar ningún archivo**. Solo hay que importar
+   `schema.sql` en esa base:
+   ```bash
+   wasmer app database list --with-password   # opcional, para verificar/entrar a phpMyAdmin
+   ```
+   > Si al desplegar no aparecen esas variables, Wasmer no ha detectado la BD: crearla desde
+   > el dashboard o añadir `app.yaml` con `capabilities.database` y volver a desplegar.
+5. **Cloudinary**: completar `CLOUDINARY_CLOUD_NAME` y `CLOUDINARY_UPLOAD_PRESET` en `core/cloudinary.php`.
+6. Entrar en `https://<nombre-app>.wasmer.app/login.php`.
+
+> Cada vez que se haga `git push` a `main`, Wasmer vuelve a desplegar automáticamente.
+
+> **Opcional:** si más adelante añades un `app.yaml`, Wasmer extiende la configuración con sus valores (por ejemplo `scaling.mode: single_concurrency`, recomendado para PHP, o `capabilities.database` para aprovisionar la BD automáticamente).
+
+## 8. Endpoints de la API
 
 Todos responden JSON `{ "success": bool, "message": string }` y exigen sesión de administrador (401 en caso contrario).
 
 | Archivo | Método | Uso |
 |---|---|---|
-| `api/leer_producto.php?id=` | GET | Devuelve 1 producto para editar |
-| `api/crear.php` | POST | Sube foto a Cloudinary + inserta en MySQL |
-| `api/actualizar.php` | POST | Actualiza; si no se adjunta foto, conserva la anterior |
-| `api/eliminar.php` | POST | Elimina el registro |
+| `admin/api/leer_producto.php?id=` | GET | Devuelve 1 producto para editar |
+| `admin/api/crear.php` | POST | Sube foto a Cloudinary + inserta en MySQL |
+| `admin/api/actualizar.php` | POST | Actualiza; si no se adjunta foto, conserva la anterior |
+| `admin/api/eliminar.php` | POST | Elimina el registro |
 
-## 8. Almacenamiento de imágenes: Cloudinary
+## 9. Almacenamiento de imágenes: Cloudinary
 
 Las fotos **no se guardan nunca en el servidor local** (clave en hosting compartido, donde el espacio es limitado). Se suben a [Cloudinary](https://cloudinary.com), un CDN de imágenes, y en MySQL solo se persiste la URL pública en `productos.imagen_url`.
 
@@ -131,7 +172,7 @@ Las fotos **no se guardan nunca en el servidor local** (clave en hosting compart
 
 ```
 admin.js (FormData con la imagen)
-   → public/api/crear.php | actualizar.php
+   → admin/api/crear.php | actualizar.php
    → ProductoController::crear() / actualizar()
    → subirImagenCloudinary() en core/cloudinary.php   (valida MIME: JPG, PNG o WEBP)
    → cURL POST https://api.cloudinary.com/v1_1/<cloud_name>/image/upload
@@ -157,7 +198,7 @@ admin.js (FormData con la imagen)
 - Las imágenes subidas quedan **públicas** (cualquiera con la URL puede verlas): no usar Cloudinary para datos privados.
 - Si falla la subida, el endpoint responde `success: false` con el mensaje de Cloudinary y no se crea el producto.
 
-## 9. Seguridad implementada
+## 10. Seguridad implementada
 
 - Consultas 100% preparadas (PDO) contra inyección SQL.
 - Contraseñas con `password_hash()` / `password_verify()` (bcrypt).
@@ -168,7 +209,7 @@ admin.js (FormData con la imagen)
 - `core/config.php` fuera del repositorio (`.gitignore`).
 - El formulario de login responde en tiempo similar aunque el usuario no exista.
 
-## 10. Reglas de negocio clave
+## 11. Reglas de negocio clave
 
 1. Las imágenes nunca se guardan en el servidor: van a Cloudinary y MySQL solo recibe la URL.
 2. Al editar, si no se adjunta una foto nueva, se conserva la `imagen_url` anterior.
